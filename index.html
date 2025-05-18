@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>File Hoster</title>
   <style>
     body {
@@ -30,17 +30,22 @@
     .output {
       margin-top: 30px;
       font-size: 18px;
+      word-wrap: break-word;
     }
     .preview {
       margin-top: 20px;
       max-width: 100%;
+    }
+    img, video {
+      max-width: 400px;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
   <h1>Upload Your File</h1>
   <input type="file" id="fileInput" />
-  <br/>
+  <br />
   <button onclick="uploadFile()">Upload</button>
 
   <div class="output" id="output"></div>
@@ -52,51 +57,54 @@
       const output = document.getElementById("output");
       const preview = document.getElementById("preview");
 
+      output.innerHTML = "";
+      preview.innerHTML = "";
+
       if (fileInput.files.length === 0) {
-        output.innerHTML = "Please select a file.";
+        output.textContent = "Please select a file.";
         return;
       }
 
       const file = fileInput.files[0];
-      const fileExt = file.name.split('.').pop().toLowerCase();
-
       const formData = new FormData();
       formData.append("file", file);
 
-      output.innerHTML = "Uploading...";
+      output.textContent = "Uploading...";
 
       try {
-        const response = await fetch("/api/uploads", {
+        const response = await fetch("/api/upload", {
           method: "POST",
-          body: formData
+          body: formData,
         });
+
+        if (!response.ok) {
+          throw new Error(`Upload failed: ${response.statusText}`);
+        }
 
         const data = await response.json();
 
         if (data.url) {
-          output.innerHTML = `✅ Your file has been hosted at:<br><a href="${data.url}" target="_blank">${data.url}</a>`;
-          preview.innerHTML = "";
+          output.innerHTML = `Your file has been hosted at:<br><a href="${data.url}" target="_blank">${data.url}</a>`;
 
-          if (["png", "jpg", "jpeg", "gif"].includes(fileExt)) {
+          const ext = file.name.split('.').pop().toLowerCase();
+
+          if (["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) {
             const img = document.createElement("img");
             img.src = data.url;
-            img.style.maxWidth = "400px";
             preview.appendChild(img);
-          } else if (["mp4", "webm"].includes(fileExt)) {
+          } else if (["mp4", "webm", "ogg"].includes(ext)) {
             const video = document.createElement("video");
             video.src = data.url;
             video.controls = true;
-            video.style.maxWidth = "400px";
             preview.appendChild(video);
           } else {
-            preview.innerHTML = "Preview not available for this file type.";
+            preview.textContent = "Preview not available for this file type.";
           }
         } else {
-          output.innerHTML = "❌ Upload failed: No URL returned.";
+          throw new Error("No URL returned.");
         }
-      } catch (error) {
-        console.error("Error uploading file:", error);
-        output.innerHTML = "❌ Upload failed. Please try again.";
+      } catch (err) {
+        output.textContent = `❌ ${err.message}`;
       }
     }
   </script>
