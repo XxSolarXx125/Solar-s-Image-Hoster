@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>File Hoster</title>
+  <style>
+    body {
+      background-color: #1e1e1e;
+      color: #ffffff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 40px;
+    }
+    h1 {
+      color: #9d4edd;
+    }
+    input[type="file"] {
+      padding: 10px;
+      margin: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #9d4edd;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .output {
+      margin-top: 30px;
+      font-size: 18px;
+    }
+    .preview {
+      margin-top: 20px;
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h1>Upload Your File</h1>
+  <input type="file" id="fileInput" />
+  <br/>
+  <button onclick="uploadFile()">Upload</button>
+
+  <div class="output" id="output"></div>
+  <div class="preview" id="preview"></div>
+
+  <script>
+    function uploadFile() {
+      const fileInput = document.getElementById("fileInput");
+      const output = document.getElementById("output");
+      const preview = document.getElementById("preview");
+
+      if (fileInput.files.length === 0) {
+        output.innerHTML = "Please select a file.";
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const fileName = file.name;
+      const fileURL = "https://yourwebsite.com/uploads/" + encodeURIComponent(fileName);
+      const fileExt = fileName.split('.').pop().toLowerCase();
+
+      output.innerHTML = `Your file has been hosted at:<br><strong>${fileURL}</strong>`;
+
+      preview.innerHTML = "";
+
+      if (["png", "jpg", "jpeg", "gif"].includes(fileExt)) {
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(file);
+        img.style.maxWidth = "400px";
+        preview.appendChild(img);
+      } else if (["mp4", "webm"].includes(fileExt)) {
+        const video = document.createElement("video");
+        video.src = URL.createObjectURL(file);
+        video.controls = true;
+        video.style.maxWidth = "400px";
+        preview.appendChild(video);
+      } else {
+        preview.innerHTML = "Preview not available for this file type.";
+      }
+    }
+  </script>
+</body>
+</html>
