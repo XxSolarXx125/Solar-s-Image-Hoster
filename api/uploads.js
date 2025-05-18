@@ -1,6 +1,9 @@
 import formidable from "formidable";
 import fs from "fs/promises";
 import { v2 as cloudinary } from "cloudinary";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export const config = {
   api: {
@@ -19,34 +22,37 @@ export default async function handler(req, res) {
     return res.status(405).send("Method Not Allowed");
   }
 
-  const form = formidable({ keepExtensions: true });
+  const form = new formidable.IncomingForm({ keepExtensions: true });
 
   try {
-    const [fields, files] = await form.parse(req);
-    const file = files.file;
+    const { files } = await new Promise((resolve, reject) => {
+      form.parse(req, (err, fields, files) => {
+        if (err) reject(err);
+        else resolve({ fields, files });
+      });
+    });
 
+    const file = files.file;
     if (!file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
-    const fileData = await fs.readFile(file[0].filepath);
+    const fileData = await fs.readFile(file.filepath);
 
-    const result = await cloudinary.uploader.upload_stream(
-      { resource_type: "auto" },
-      (error, result) => {
-        if (error) {
-          console.error("Cloudinary upload error:", error);
-          return res.status(500).json({ error: "Upload failed" });
+    const uploadResult = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { resource_type: "auto" },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
         }
-        res.status(200).json({ url: result.secure_url });
-      }
-    );
+      );
+      uploadStream.end(fileData);
+    });
 
-    // Send the file buffer to Cloudinary stream
-    result.end(fileData);
-
-  } catch (err) {
-    console.error("Error processing upload:", err);
-    res.status(500).json({ error: "Upload failed" });
+    return res.status(200).json({ url: uploadResult.secure_url });
+  } catch (error) {
+    console.error("Upload error:", error);
+    return res.status(500).json({ error: "Upload failed" });
   }
 }
