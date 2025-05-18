@@ -1,5 +1,3 @@
-// api/upload.js
-
 import formidable from "formidable";
 import { v2 as cloudinary } from "cloudinary";
 
@@ -18,31 +16,32 @@ cloudinary.config({
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    res.status(405).send("Method Not Allowed");
-    return;
+    return res.status(405).json({ error: "Method Not Allowed" });
   }
 
   const form = formidable({ multiples: false });
 
   form.parse(req, async (err, fields, files) => {
     if (err) {
-      res.status(500).json({ error: "File parsing error" });
-      return;
+      console.error("Form parse error:", err);
+      return res.status(500).json({ error: "File parsing error" });
     }
 
     const file = files.file;
+
     if (!file) {
-      res.status(400).json({ error: "No file uploaded" });
-      return;
+      return res.status(400).json({ error: "No file uploaded" });
     }
 
     try {
       const result = await cloudinary.uploader.upload(file.filepath, {
         resource_type: "auto",
       });
-      res.status(200).json({ url: result.secure_url });
+
+      return res.status(200).json({ url: result.secure_url });
     } catch (e) {
-      res.status(500).json({ error: "Upload failed" });
+      console.error("Cloudinary upload error:", e);
+      return res.status(500).json({ error: "Upload failed" });
     }
   });
 }
