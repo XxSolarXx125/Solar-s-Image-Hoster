@@ -1,5 +1,6 @@
 import formidable from "formidable";
 import { v2 as cloudinary } from "cloudinary";
+import fs from "fs";
 
 export const config = {
   api: {
@@ -7,7 +8,7 @@ export const config = {
   },
 };
 
-// Configure Cloudinary
+// Configure Cloudinary using environment variables
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -16,32 +17,32 @@ cloudinary.config({
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method Not Allowed" });
+    res.status(405).send("Method Not Allowed");
+    return;
   }
 
   const form = formidable({ multiples: false });
 
   form.parse(req, async (err, fields, files) => {
     if (err) {
-      console.error("Form parse error:", err);
-      return res.status(500).json({ error: "File parsing error" });
+      res.status(500).json({ error: "File parsing error" });
+      return;
     }
 
     const file = files.file;
-
     if (!file) {
-      return res.status(400).json({ error: "No file uploaded" });
+      res.status(400).json({ error: "No file uploaded" });
+      return;
     }
 
     try {
       const result = await cloudinary.uploader.upload(file.filepath, {
         resource_type: "auto",
       });
-
-      return res.status(200).json({ url: result.secure_url });
+      res.status(200).json({ url: result.secure_url });
     } catch (e) {
-      console.error("Cloudinary upload error:", e);
-      return res.status(500).json({ error: "Upload failed" });
+      console.error("Cloudinary error:", e);
+      res.status(500).json({ error: "Upload failed" });
     }
   });
 }
