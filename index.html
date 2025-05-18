@@ -35,6 +35,9 @@
       margin-top: 20px;
       max-width: 100%;
     }
+    a {
+      color: #00bfff;
+    }
   </style>
 </head>
 <body>
@@ -47,7 +50,7 @@
   <div class="preview" id="preview"></div>
 
   <script>
-    function uploadFile() {
+    async function uploadFile() {
       const fileInput = document.getElementById("fileInput");
       const output = document.getElementById("output");
       const preview = document.getElementById("preview");
@@ -58,27 +61,45 @@
       }
 
       const file = fileInput.files[0];
-      const fileName = file.name;
-      const fileURL = "https://yourwebsite.com/uploads/" + encodeURIComponent(fileName);
-      const fileExt = fileName.split('.').pop().toLowerCase();
+      const fileExt = file.name.split('.').pop().toLowerCase();
 
-      output.innerHTML = `Your file has been hosted at:<br><strong>${fileURL}</strong>`;
+      const formData = new FormData();
+      formData.append("file", file);
 
-      preview.innerHTML = "";
+      output.innerHTML = "Uploading...";
 
-      if (["png", "jpg", "jpeg", "gif"].includes(fileExt)) {
-        const img = document.createElement("img");
-        img.src = URL.createObjectURL(file);
-        img.style.maxWidth = "400px";
-        preview.appendChild(img);
-      } else if (["mp4", "webm"].includes(fileExt)) {
-        const video = document.createElement("video");
-        video.src = URL.createObjectURL(file);
-        video.controls = true;
-        video.style.maxWidth = "400px";
-        preview.appendChild(video);
-      } else {
-        preview.innerHTML = "Preview not available for this file type.";
+      try {
+        const response = await fetch("/api/uploads", {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.url) {
+          output.innerHTML = `✅ Your file has been hosted at:<br><a href="${data.url}" target="_blank">${data.url}</a>`;
+          preview.innerHTML = "";
+
+          if (["png", "jpg", "jpeg", "gif"].includes(fileExt)) {
+            const img = document.createElement("img");
+            img.src = data.url;
+            img.style.maxWidth = "400px";
+            preview.appendChild(img);
+          } else if (["mp4", "webm"].includes(fileExt)) {
+            const video = document.createElement("video");
+            video.src = data.url;
+            video.controls = true;
+            video.style.maxWidth = "400px";
+            preview.appendChild(video);
+          } else {
+            preview.innerHTML = "Preview not available for this file type.";
+          }
+        } else {
+          output.innerHTML = "❌ Upload failed: No URL returned.";
+        }
+      } catch (error) {
+        console.error("Error uploading file:", error);
+        output.innerHTML = "❌ Upload failed. Please try again.";
       }
     }
   </script>
